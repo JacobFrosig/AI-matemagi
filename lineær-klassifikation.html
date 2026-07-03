@@ -104,7 +104,7 @@
 <body>
   <h1>Lineær klassifikation med to input</h1>
   <p>
-    Justér vægtene og bias og se, hvordan skillelinjen ændrer sig.
+    Justér vægtene $w_1$, $w_2$ og bias $b$, og se hvordan skillelinjen mellem rødt og blåt flytter sig. Datasættet er de samme elleve vælgere som i kapitel 3.
   </p>
 
   <div class="container">
@@ -112,33 +112,33 @@
       <div class="formula" id="formula"></div>
 
       <div class="control">
-        <label for="w1">w₁ (rabat)</label>
-        <input id="w1" type="range" min="-1" max="1" step="0.05" value="0.2">
+        <label for="w1">w₁ (økonomi)</label>
+        <input id="w1" type="range" min="-1" max="1" step="0.05" value="0.1">
         <div class="value" id="w1Value"></div>
       </div>
 
       <div class="control">
-        <label for="w2">w₂ (behov)</label>
-        <input id="w2" type="range" min="-1" max="1" step="0.05" value="0.5">
+        <label for="w2">w₂ (værdipolitik)</label>
+        <input id="w2" type="range" min="-1" max="1" step="0.05" value="0.1">
         <div class="value" id="w2Value"></div>
       </div>
 
       <div class="control">
         <label for="b">b (bias)</label>
-        <input id="b" type="range" min="-15" max="5" step="0.5" value="-6">
+        <input id="b" type="range" min="-3" max="3" step="0.1" value="1">
         <div class="value" id="bValue"></div>
       </div>
 
       <div class="legend">
-        <span><span class="dot" style="background:#2563eb;"></span>Faktisk ikke køb</span>
-        <span><span class="dot" style="background:#dc2626;"></span>Faktisk køb</span>
+        <span><span class="dot" style="background:#C41E1E;"></span>Stemmer rødt</span>
+        <span><span class="dot" style="background:#1E46BE;"></span>Stemmer blåt</span>
       </div>
 
       <table id="dataTable">
         <thead>
           <tr>
-            <th>Rabat</th>
-            <th>Behov</th>
+            <th>Økonomi (x₁)</th>
+            <th>Værdipolitik (x₂)</th>
             <th>Faktisk</th>
             <th>Model</th>
             <th>z</th>
@@ -155,12 +155,17 @@
 
   <script>
     const data = [
-      { x1: 10, x2: 2, actual: 0 },
-      { x1: 15, x2: 3, actual: 0 },
-      { x1: 20, x2: 4, actual: 0 },
-      { x1: 25, x2: 6, actual: 1 },
-      { x1: 30, x2: 7, actual: 1 },
-      { x1: 35, x2: 8, actual: 1 }
+      { x1: -4, x2: -3, actual: 0 },
+      { x1: -3, x2: -4, actual: 0 },
+      { x1: -2, x2: -1, actual: 0 },
+      { x1: -1, x2: -2, actual: 0 },
+      { x1: -3, x2: 1,  actual: 0 },
+      { x1: 1,  x2: -3, actual: 0 },
+      { x1: 1,  x2: 3,  actual: 1 },
+      { x1: 2,  x2: 2,  actual: 1 },
+      { x1: 3,  x2: 1,  actual: 1 },
+      { x1: 4,  x2: 3,  actual: 1 },
+      { x1: 3,  x2: 4,  actual: 1 }
     ];
 
     const svg = document.getElementById("plot");
@@ -179,8 +184,8 @@
     const height = 520;
     const margin = { top: 30, right: 30, bottom: 60, left: 70 };
 
-    const xMin = 5, xMax = 40;
-    const yMin = 0, yMax = 10;
+    const xMin = -5, xMax = 5;
+    const yMin = -5, yMax = 5;
 
     function xScale(x) {
       return margin.left + (x - xMin) / (xMax - xMin) * (width - margin.left - margin.right);
@@ -196,6 +201,10 @@
 
     function classify(z) {
       return z > 0 ? 1 : 0;
+    }
+
+    function labelFor(v) {
+      return v === 1 ? "Blåt" : "Rødt";
     }
 
     function clearSVG() {
@@ -258,20 +267,20 @@
       line(margin.left, height - margin.bottom, width - margin.right, height - margin.bottom);
       line(margin.left, margin.top, margin.left, height - margin.bottom);
 
-      for (let x = 10; x <= 35; x += 5) {
+      for (let x = -4; x <= 4; x += 2) {
         const px = xScale(x);
         line(px, height - margin.bottom, px, height - margin.bottom + 6, { strokeWidth: 1 });
         text(px, height - margin.bottom + 22, String(x), { size: 13 });
       }
 
-      for (let y = 0; y <= 10; y += 2) {
+      for (let y = -4; y <= 4; y += 2) {
         const py = yScale(y);
         line(margin.left - 6, py, margin.left, py, { strokeWidth: 1 });
         text(margin.left - 18, py + 4, String(y), { size: 13 });
       }
 
-      text((margin.left + width - margin.right) / 2, height - 15, "Rabat x₁", { size: 16 });
-      text(20, (margin.top + height - margin.bottom) / 2, "Behov x₂", {
+      text((margin.left + width - margin.right) / 2, height - 15, "Økonomisk placering x₁", { size: 16 });
+      text(20, (margin.top + height - margin.bottom) / 2, "Værdipolitisk placering x₂", {
         size: 16
       }).setAttribute("transform", `rotate(-90 20 ${(margin.top + height - margin.bottom) / 2})`);
     }
@@ -324,7 +333,7 @@
         const z = w1 * p.x1 + w2 * p.x2 + b;
         const pred = classify(z);
 
-        const fill = p.actual === 1 ? "#dc2626" : "#2563eb";
+        const fill = p.actual === 1 ? "#1E46BE" : "#C41E1E";
         const stroke = pred === p.actual ? "#111111" : "#f59e0b";
 
         circle(xScale(p.x1), yScale(p.x2), 7, {
@@ -345,8 +354,8 @@
         tr.innerHTML = `
           <td>${p.x1}</td>
           <td>${p.x2}</td>
-          <td>${p.actual}</td>
-          <td>${pred}</td>
+          <td>${labelFor(p.actual)}</td>
+          <td>${labelFor(pred)}</td>
           <td>${z.toFixed(2)}</td>
         `;
         tbody.appendChild(tr);
