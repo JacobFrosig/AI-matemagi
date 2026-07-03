@@ -30,6 +30,11 @@
       box-shadow: 0 2px 8px rgba(0,0,0,0.08);
     }
 
+    .table-wrap {
+      margin-top: 24px;
+      overflow-x: auto;
+    }
+
     .control {
       margin-bottom: 18px;
     }
@@ -119,13 +124,13 @@
 
       <div class="control">
         <label for="w2">w₂ (værdipolitik)</label>
-        <input id="w2" type="range" min="-1" max="1" step="0.05" value="0.1">
+        <input id="w2" type="range" min="-1" max="1" step="0.05" value="-0.1">
         <div class="value" id="w2Value"></div>
       </div>
 
       <div class="control">
         <label for="b">b (bias)</label>
-        <input id="b" type="range" min="-3" max="3" step="0.1" value="1">
+        <input id="b" type="range" min="-3" max="3" step="0.1" value="0">
         <div class="value" id="bValue"></div>
       </div>
 
@@ -133,24 +138,26 @@
         <span><span class="dot" style="background:#C41E1E;"></span>Stemmer rødt</span>
         <span><span class="dot" style="background:#1E46BE;"></span>Stemmer blåt</span>
       </div>
-
-      <table id="dataTable">
-        <thead>
-          <tr>
-            <th>Økonomi (x₁)</th>
-            <th>Værdipolitik (x₂)</th>
-            <th>Faktisk</th>
-            <th>Model</th>
-            <th>z</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
     </div>
 
     <div class="plot-panel">
       <svg id="plot" viewBox="0 0 700 520"></svg>
     </div>
+  </div>
+
+  <div class="panel table-wrap">
+    <table id="dataTable">
+      <thead>
+        <tr>
+          <th>Økonomi (x₁)</th>
+          <th>Værdipolitik (x₂)</th>
+          <th>Faktisk</th>
+          <th>Model</th>
+          <th>z</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
   </div>
 
   <script>
