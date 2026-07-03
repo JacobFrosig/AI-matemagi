@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>To lags neuralt netværk - midterparti</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 24px;
+      background: #f7f7f7;
+      line-height: 1.4;
+      color: #111;
+    }
+    h1, h2 { margin-bottom: 8px; }
+    .layout {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 24px;
+      align-items: start;
+    }
+    .panel, .plot-panel {
+      background: white;
+      padding: 16px;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    }
+    .neuron-card {
+      border: 1px solid #e5e5e5;
+      border-radius: 10px;
+      padding: 10px 12px;
+      margin-bottom: 12px;
+    }
+    .neuron-card.output {
+      border-color: #7C3AED;
+      background: #faf7ff;
+    }
+    .section-title {
+      font-size: 15px;
+      font-weight: bold;
+      margin: 0 0 8px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .control {
+      margin-bottom: 8px;
+    }
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 2px;
+      font-size: 13px;
+    }
+    input[type="range"] {
+      width: 100%;
+    }
+    .value {
+      font-family: monospace;
+      font-size: 12px;
+      margin-top: 0px;
+      color: #444;
+    }
+    .formula {
+      font-family: monospace;
+      font-size: 12.5px;
+      background: #f0f0f0;
+      padding: 10px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      white-space: pre-line;
+    }
+    .buttons {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    button {
+      flex: 1;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      background: #f3f3f3;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    button.primary {
+      background: #7C3AED;
+      color: white;
+      border-color: #7C3AED;
+    }
+    button:hover { filter: brightness(0.95); }
+    .plot-wrap {
+      position: relative;
+      width: 100%;
+    }
+    canvas, svg {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+    svg { background: transparent; }
+    .plot-spacer {
+      width: 100%;
+    }
+    .summary {
+      margin-top: 12px;
+      font-size: 15px;
+      font-weight: bold;
+    }
+    .summary .ok { color: #16a34a; }
+    .summary .bad { color: #dc2626; }
+    .legend {
+      font-size: 13px;
+      margin-top: 10px;
+    }
+    .legend span {
+      display: inline-flex;
+      align-items: center;
+      margin-right: 14px;
+    }
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 6px;
+      border: 2px solid #111;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin-top: 14px;
+      font-size: 12.5px;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 5px 6px;
+      text-align: center;
+    }
+    th {
+      background: #f3f3f3;
+    }
+    .small {
+      font-size: 12px;
+      color: #444;
+    }
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12.5px;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Interaktivt værktøj: to lag og et skjult lag</h1>
+  <p>Datasættet er det samme som i bogens kapitel 4: 13 vælgere, hvor de lilla er <strong>midterparti</strong>-vælgere (y=1) og de grå <strong>ikke</strong> er (y=0). Justér vægtene for de fire skjulte neuroner (h₁–h₄) og for outputneuronen, og se hvordan den skraverede beslutningsregion ændrer sig. Sluk evt. en neuron for output med afkrydsningsfeltet, hvis I vil prøve med færre end fire skjulte neuroner (se Opgave 4.10).</p>
+
+  <div class="buttons">
+    <button id="loadExample" class="primary">Indlæs eksempel fra bogen (boks)</button>
+    <button id="resetDefault">Nulstil</button>
+  </div>
+
+  <div class="layout">
+    <div class="panel">
+      <div class="formula" id="formulaBox"></div>
+
+      <div class="neuron-card">
+        <div class="section-title">Skjult neuron h₁ <span style="color:#16a34a">■</span></div>
+        <div class="control"><label for="w11">w₁₁ (vægt på x₁)</label><input id="w11" type="range" min="-8" max="8" step="0.2" value="0.1"><div class="value" id="w11v"></div></div>
+        <div class="control"><label for="w12">w₁₂ (vægt på x₂)</label><input id="w12" type="range" min="-8" max="8" step="0.2" value="0"><div class="value" id="w12v"></div></div>
+        <div class="control"><label for="b1">b₁ (bias)</label><input id="b1" type="range" min="-12" max="12" step="0.5" value="0"><div class="value" id="b1v"></div></div>
+        <div class="checkbox-row"><input type="checkbox" id="a1" checked><label for="a1" style="margin:0;font-weight:normal">Brug h₁ i output</label></div>
+      </div>
+
+      <div class="neuron-card">
+        <div class="section-title">Skjult neuron h₂ <span style="color:#9333ea">■</span></div>
+        <div class="control"><label for="w21">w₂₁ (vægt på x₁)</label><input id="w21" type="range" min="-8" max="8" step="0.2" value="-0.1"><div class="value" id="w21v"></div></div>
+        <div class="control"><label for="w22">w₂₂ (vægt på x₂)</label><input id="w22" type="range" min="-8" max="8" step="0.2" value="0"><div class="value" id="w22v"></div></div>
+        <div class="control"><label for="b2">b₂ (bias)</label><input id="b2" type="range" min="-12" max="12" step="0.5" value="0"><div class="value" id="b2v"></div></div>
+        <div class="checkbox-row"><input type="checkbox" id="a2" checked><label for="a2" style="margin:0;font-weight:normal">Brug h₂ i output</label></div>
+      </div>
+
+      <div class="neuron-card">
+        <div class="section-title">Skjult neuron h₃ <span style="color:#ea580c">■</span></div>
+        <div class="control"><label for="w31">w₃₁ (vægt på x₁)</label><input id="w31" type="range" min="-8" max="8" step="0.2" value="0"><div class="value" id="w31v"></div></div>
+        <div class="control"><label for="w32">w₃₂ (vægt på x₂)</label><input id="w32" type="range" min="-8" max="8" step="0.2" value="0.1"><div class="value" id="w32v"></div></div>
+        <div class="control"><label for="b3">b₃ (bias)</label><input id="b3" type="range" min="-12" max="12" step="0.5" value="0"><div class="value" id="b3v"></div></div>
+        <div class="checkbox-row"><input type="checkbox" id="a3" checked><label for="a3" style="margin:0;font-weight:normal">Brug h₃ i output</label></div>
+      </div>
+
+      <div class="neuron-card">
+        <div class="section-title">Skjult neuron h₄ <span style="color:#0891b2">■</span></div>
+        <div class="control"><label for="w41">w₄₁ (vægt på x₁)</label><input id="w41" type="range" min="-8" max="8" step="0.2" value="0"><div class="value" id="w41v"></div></div>
+        <div class="control"><label for="w42">w₄₂ (vægt på x₂)</label><input id="w42" type="range" min="-8" max="8" step="0.2" value="-0.1"><div class="value" id="w42v"></div></div>
+        <div class="control"><label for="b4">b₄ (bias)</label><input id="b4" type="range" min="-12" max="12" step="0.5" value="0"><div class="value" id="b4v"></div></div>
+        <div class="checkbox-row"><input type="checkbox" id="a4" checked><label for="a4" style="margin:0;font-weight:normal">Brug h₄ i output</label></div>
+      </div>
+
+      <div class="neuron-card output">
+        <div class="section-title">Outputneuron y</div>
+        <div class="control"><label for="v1">v₁ (vægt på h₁)</label><input id="v1" type="range" min="-3" max="3" step="0.1" value="0.5"><div class="value" id="v1v"></div></div>
+        <div class="control"><label for="v2">v₂ (vægt på h₂)</label><input id="v2" type="range" min="-3" max="3" step="0.1" value="0.5"><div class="value" id="v2v"></div></div>
+        <div class="control"><label for="v3">v₃ (vægt på h₃)</label><input id="v3" type="range" min="-3" max="3" step="0.1" value="0.5"><div class="value" id="v3v"></div></div>
+        <div class="control"><label for="v4">v₄ (vægt på h₄)</label><input id="v4" type="range" min="-3" max="3" step="0.1" value="0.5"><div class="value" id="v4v"></div></div>
+        <div class="control"><label for="bud">b_ud (bias)</label><input id="bud" type="range" min="-6" max="6" step="0.1" value="-1"><div class="value" id="budv"></div></div>
+      </div>
+
+      <div class="legend">
+        <span><span class="dot" style="background:#9CA3AF"></span>Faktisk: ikke midterparti</span>
+        <span><span class="dot" style="background:#7C3AED"></span>Faktisk: midterparti</span>
+      </div>
+      <p class="small">En sort ring om punktet betyder, at modellen klassificerer det <strong>forkert</strong> (tærskel y &gt; 0,5).</p>
+      <div class="summary" id="summary"></div>
+    </div>
+
+    <div class="plot-panel">
+      <h2>Beslutningsregion og datapunkter</h2>
+      <div class="plot-wrap">
+        <div class="plot-spacer" style="padding-top:100%"></div>
+        <canvas id="heatmap" width="620" height="620"></canvas>
+        <svg id="plot" viewBox="0 0 620 620"></svg>
+      </div>
+
+      <table id="dataTable">
+        <thead>
+          <tr>
+            <th>x₁</th><th>x₂</th><th>Faktisk</th>
+            <th>h₁</th><th>h₂</th><th>h₃</th><th>h₄</th>
+            <th>y</th><th>Model</th><th>Korrekt?</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    const data = [
+      {x1:-4, x2:-4, cls:0}, {x1:-4, x2:4, cls:0}, {x1:4, x2:-4, cls:0}, {x1:4, x2:4, cls:0},
+      {x1:-4, x2:0, cls:0}, {x1:4, x2:0, cls:0}, {x1:0, x2:4, cls:0}, {x1:0, x2:-4, cls:0},
+      {x1:0, x2:0, cls:1}, {x1:1, x2:-1, cls:1}, {x1:-1, x2:1, cls:1}, {x1:1, x2:1, cls:1}, {x1:-1, x2:-1, cls:1}
+    ];
+
+    const width = 620, height = 620;
+    const margin = {top: 45, right: 70, bottom: 95, left: 70};
+    const xMin = -5.5, xMax = 5.5, yMin = -5.5, yMax = 5.5;
+    const plotW = width - margin.left - margin.right;
+    const plotH = height - margin.top - margin.bottom;
+
+    const hiddenIds = ["w11","w12","b1","w21","w22","b2","w31","w32","b3","w41","w42","b4"];
+    const outputIds = ["v1","v2","v3","v4","bud"];
+    const checkboxIds = ["a1","a2","a3","a4"];
+    const allIds = hiddenIds.concat(outputIds);
+
+    const sliders = Object.fromEntries(allIds.map(id => [id, document.getElementById(id)]));
+    const valueBoxes = Object.fromEntries(allIds.map(id => [id, document.getElementById(id + "v")]));
+    const checkboxes = Object.fromEntries(checkboxIds.map(id => [id, document.getElementById(id)]));
+    const svg = document.getElementById("plot");
+    const canvas = document.getElementById("heatmap");
+    const ctx = canvas.getContext("2d");
+    const tbody = document.querySelector("#dataTable tbody");
+    const formulaBox = document.getElementById("formulaBox");
+    const summaryBox = document.getElementById("summary");
+
+    const neuronColors = ["#16a34a","#9333ea","#ea580c","#0891b2"];
+
+    function xScale(x){ return margin.left + (x - xMin)/(xMax-xMin)*plotW; }
+    function yScale(y){ return height - margin.bottom - (y - yMin)/(yMax-yMin)*plotH; }
+    function xInv(px){ return xMin + (px - margin.left)/plotW*(xMax-xMin); }
+    function yInv(py){ return yMin + (height - margin.bottom - py)/plotH*(yMax-yMin); }
+    function sigmoid(z){ return 1/(1+Math.exp(-z)); }
+
+    function getParams(){
+      const p = {};
+      for(const id of allIds) p[id] = parseFloat(sliders[id].value);
+      for(const id of checkboxIds) p[id] = checkboxes[id].checked;
+      return p;
+    }
+
+    function forward(p, x1, x2){
+      const z1 = p.w11*x1 + p.w12*x2 + p.b1;
+      const z2 = p.w21*x1 + p.w22*x2 + p.b2;
+      const z3 = p.w31*x1 + p.w32*x2 + p.b3;
+      const z4 = p.w41*x1 + p.w42*x2 + p.b4;
+      const h1 = sigmoid(z1), h2 = sigmoid(z2), h3 = sigmoid(z3), h4 = sigmoid(z4);
+      const zout = (p.a1?p.v1*h1:0) + (p.a2?p.v2*h2:0) + (p.a3?p.v3*h3:0) + (p.a4?p.v4*h4:0) + p.bud;
+      const y = sigmoid(zout);
+      return {h1,h2,h3,h4,zout,y};
+    }
+
+    function clearSVG(){ while(svg.firstChild) svg.removeChild(svg.firstChild); }
+    function line(x1,y1,x2,y2,opt={}){
+      const el = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      el.setAttribute("x1", x1); el.setAttribute("y1", y1); el.setAttribute("x2", x2); el.setAttribute("y2", y2);
+      el.setAttribute("stroke", opt.stroke || "black");
+      el.setAttribute("stroke-width", opt.strokeWidth || 2);
+      if(opt.dash) el.setAttribute("stroke-dasharray", opt.dash);
+      svg.appendChild(el); return el;
+    }
+    function text(x,y,t,opt={}){
+      const el = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      el.setAttribute("x", x); el.setAttribute("y", y);
+      el.setAttribute("font-size", opt.size || 14);
+      el.setAttribute("text-anchor", opt.anchor || "middle");
+      el.setAttribute("fill", opt.fill || "black");
+      el.textContent = t; svg.appendChild(el); return el;
+    }
+    function circle(cx,cy,r,opt={}){
+      const el = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      el.setAttribute("cx", cx); el.setAttribute("cy", cy); el.setAttribute("r", r);
+      el.setAttribute("fill", opt.fill || "black");
+      el.setAttribute("stroke", opt.stroke || "none");
+      el.setAttribute("stroke-width", opt.strokeWidth || 1);
+      svg.appendChild(el); return el;
+    }
+    function rectEl(x,y,w,h,opt={}){
+      const el = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+      el.setAttribute("x", x); el.setAttribute("y", y); el.setAttribute("width", w); el.setAttribute("height", h);
+      el.setAttribute("fill", opt.fill || "none");
+      el.setAttribute("stroke", opt.stroke || "none");
+      svg.appendChild(el); return el;
+    }
+
+    function drawAxes(){
+      rectEl(margin.left, margin.top, plotW, plotH, {stroke:"#999"});
+      for(let x=-4; x<=4; x+=2){
+        const px = xScale(x);
+        line(px, margin.top, px, height-margin.bottom, {stroke:"#eee", strokeWidth:1});
+        line(px, height-margin.bottom, px, height-margin.bottom+6, {strokeWidth:1});
+        text(px, height-margin.bottom+22, String(x), {size:13});
+      }
+      for(let y=-4; y<=4; y+=2){
+        const py = yScale(y);
+        line(margin.left, py, width-margin.right, py, {stroke:"#eee", strokeWidth:1});
+        line(margin.left-6, py, margin.left, py, {strokeWidth:1});
+        text(margin.left-18, py+4, String(y), {size:13});
+      }
+      text((margin.left+width-margin.right)/2, height-40, "Økonomisk ståsted x₁", {size:15});
+      const ylabel = text(24, (margin.top+height-margin.bottom)/2, "Værdipolitisk ståsted x₂", {size:15});
+      ylabel.setAttribute("transform", `rotate(-90 24 ${(margin.top+height-margin.bottom)/2})`);
+    }
+
+    function drawBoundary(a,b,c,opt={}){
+      // a*x1 + b*x2 + c = 0
+      const pts = [];
+      const eps = 1e-9;
+      if(Math.abs(b) > eps){
+        const yLeft = (-a*xMin - c)/b;
+        const yRight = (-a*xMax - c)/b;
+        if(yLeft >= yMin-1e-6 && yLeft <= yMax+1e-6) pts.push({x:xMin,y:yLeft});
+        if(yRight >= yMin-1e-6 && yRight <= yMax+1e-6) pts.push({x:xMax,y:yRight});
+      }
+      if(Math.abs(a) > eps){
+        const xBottom = (-b*yMin - c)/a;
+        const xTop = (-b*yMax - c)/a;
+        if(xBottom >= xMin-1e-6 && xBottom <= xMax+1e-6) pts.push({x:xBottom,y:yMin});
+        if(xTop >= xMin-1e-6 && xTop <= xMax+1e-6) pts.push({x:xTop,y:yMax});
+      }
+      const unique = [];
+      for(const p of pts){
+        if(!unique.some(q => Math.abs(q.x-p.x)<0.02 && Math.abs(q.y-p.y)<0.02)) unique.push(p);
+      }
+      if(unique.length >= 2){
+        line(xScale(unique[0].x), yScale(unique[0].y), xScale(unique[1].x), yScale(unique[1].y), opt);
+      }
+    }
+
+    function updateFormula(p){
+      const line1 = `h1 = σ(${p.w11.toFixed(1)}·x1 ${p.w12>=0?'+':'-'} ${Math.abs(p.w12).toFixed(1)}·x2 ${p.b1>=0?'+':'-'} ${Math.abs(p.b1).toFixed(1)})`;
+      const line2 = `h2 = σ(${p.w21.toFixed(1)}·x1 ${p.w22>=0?'+':'-'} ${Math.abs(p.w22).toFixed(1)}·x2 ${p.b2>=0?'+':'-'} ${Math.abs(p.b2).toFixed(1)})`;
+      const line3 = `h3 = σ(${p.w31.toFixed(1)}·x1 ${p.w32>=0?'+':'-'} ${Math.abs(p.w32).toFixed(1)}·x2 ${p.b3>=0?'+':'-'} ${Math.abs(p.b3).toFixed(1)})`;
+      const line4 = `h4 = σ(${p.w41.toFixed(1)}·x1 ${p.w42>=0?'+':'-'} ${Math.abs(p.w42).toFixed(1)}·x2 ${p.b4>=0?'+':'-'} ${Math.abs(p.b4).toFixed(1)})`;
+      const outTerms = [
+        p.a1 ? `${p.v1.toFixed(1)}·h1` : null,
+        p.a2 ? `${p.v2.toFixed(1)}·h2` : null,
+        p.a3 ? `${p.v3.toFixed(1)}·h3` : null,
+        p.a4 ? `${p.v4.toFixed(1)}·h4` : null,
+      ].filter(Boolean).join(" + ");
+      const line5 = `y  = σ(${outTerms}${outTerms?' ':''}${p.bud>=0?'+':'-'} ${Math.abs(p.bud).toFixed(1)})`;
+      formulaBox.textContent = [line1,line2,line3,line4,line5].join("\n");
+    }
+
+    function updateTableAndSummary(p){
+      tbody.innerHTML = "";
+      let correct = 0;
+      for(const d of data){
+        const r = forward(p, d.x1, d.x2);
+        const pred = r.y > 0.5 ? 1 : 0;
+        if(pred === d.cls) correct++;
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${d.x1}</td><td>${d.x2}</td><td>${d.cls===1?"midterparti":"—"}</td>`+
+          `<td>${r.h1.toFixed(2)}</td><td>${r.h2.toFixed(2)}</td><td>${r.h3.toFixed(2)}</td><td>${r.h4.toFixed(2)}</td>`+
+          `<td>${r.y.toFixed(2)}</td><td>${pred===1?"midterparti":"—"}</td><td>${pred===d.cls?"✓":"✗"}</td>`;
+        tbody.appendChild(tr);
+      }
+      const cls = correct === data.length ? "ok" : (correct >= data.length-3 ? "" : "bad");
+      summaryBox.innerHTML = `<span class="${cls}">${correct} af ${data.length} vælgere klassificeret korrekt</span>`;
+    }
+
+    function lerp(a,b,t){ return Math.round(a+(b-a)*t); }
+    function bgColor(y){
+      if(y >= 0.5){
+        const t = Math.min((y-0.5)/0.5, 1) * 0.85;
+        return [lerp(255,221,t), lerp(255,214,t), lerp(255,254,t)];
+      } else {
+        const t = Math.min((0.5-y)/0.5, 1) * 0.85;
+        return [lerp(255,156,t), lerp(255,163,t), lerp(255,175,t)];
+      }
+    }
+
+    function drawHeatmap(p){
+      ctx.clearRect(0,0,width,height);
+      const step = 6;
+      for(let px = margin.left; px < width - margin.right; px += step){
+        for(let py = margin.top; py < height - margin.bottom; py += step){
+          const x1 = xInv(px + step/2);
+          const x2 = yInv(py + step/2);
+          const r = forward(p, x1, x2);
+          const [rr,gg,bb] = bgColor(r.y);
+          ctx.fillStyle = `rgb(${rr},${gg},${bb})`;
+          ctx.fillRect(px, py, step+1, step+1);
+        }
+      }
+      ctx.strokeStyle = "#999";
+      ctx.strokeRect(margin.left, margin.top, plotW, plotH);
+    }
+
+    function drawPoints(p){
+      for(const d of data){
+        const r = forward(p, d.x1, d.x2);
+        const pred = r.y > 0.5 ? 1 : 0;
+        const fill = d.cls === 1 ? "#7C3AED" : "#9CA3AF";
+        const stroke = pred === d.cls ? "#111111" : "#111111";
+        const ringOpacity = pred === d.cls ? 0 : 1;
+        circle(xScale(d.x1), yScale(d.x2), 8, {fill, stroke: pred===d.cls ? "#111111" : "none", strokeWidth: 1.5});
+        if(pred !== d.cls){
+          const el = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+          el.setAttribute("cx", xScale(d.x1)); el.setAttribute("cy", yScale(d.x2)); el.setAttribute("r", 12);
+          el.setAttribute("fill", "none"); el.setAttribute("stroke", "#dc2626"); el.setAttribute("stroke-width", 2.5);
+          svg.appendChild(el);
+        }
+      }
+    }
+
+    function render(){
+      const p = getParams();
+      for(const id of allIds){ valueBoxes[id].textContent = `${id} = ${p[id].toFixed(1)}`; }
+      updateFormula(p);
+      updateTableAndSummary(p);
+      drawHeatmap(p);
+      clearSVG();
+      drawAxes();
+      if(p.a1) drawBoundary(p.w11, p.w12, p.b1, {stroke: neuronColors[0], strokeWidth: 2.5, dash: "8 6"});
+      if(p.a2) drawBoundary(p.w21, p.w22, p.b2, {stroke: neuronColors[1], strokeWidth: 2.5, dash: "8 6"});
+      if(p.a3) drawBoundary(p.w31, p.w32, p.b3, {stroke: neuronColors[2], strokeWidth: 2.5, dash: "8 6"});
+      if(p.a4) drawBoundary(p.w41, p.w42, p.b4, {stroke: neuronColors[3], strokeWidth: 2.5, dash: "8 6"});
+      drawPoints(p);
+    }
+
+    for(const id of allIds) sliders[id].addEventListener("input", render);
+    for(const id of checkboxIds) checkboxes[id].addEventListener("input", render);
+
+    const defaults = {
+      w11:0.1, w12:0, b1:0,
+      w21:-0.1, w22:0, b2:0,
+      w31:0, w32:0.1, b3:0,
+      w41:0, w42:-0.1, b4:0,
+      v1:0.5, v2:0.5, v3:0.5, v4:0.5, bud:-1,
+      a1:true, a2:true, a3:true, a4:true
+    };
+
+    const bogEksempel = {
+      w11:-5, w12:0, b1:10,
+      w21:5, w22:0, b2:10,
+      w31:0, w32:-5, b3:10,
+      w41:0, w42:5, b4:10,
+      v1:1, v2:1, v3:1, v4:1, bud:-3.5,
+      a1:true, a2:true, a3:true, a4:true
+    };
+
+    function applyValues(vals){
+      for(const id of allIds) sliders[id].value = vals[id];
+      for(const id of checkboxIds) checkboxes[id].checked = vals[id];
+      render();
+    }
+
+    document.getElementById("loadExample").addEventListener("click", () => applyValues(bogEksempel));
+    document.getElementById("resetDefault").addEventListener("click", () => applyValues(defaults));
+
+    applyValues(defaults);
+  </script>
+</body>
+</html>
