@@ -109,7 +109,7 @@
 <body>
   <h1>Lineær klassifikation med to input</h1>
   <p>
-    Justér vægtene $w_1$, $w_2$ og bias $b$, og se hvordan skillelinjen mellem rødt og blåt flytter sig. Datasættet er de samme elleve vælgere som i kapitel 3.
+    Modellen er z = w₁·x₁ + w₂·x₂ + b, hvor x₁ er økonomisk placering og x₂ er værdipolitisk placering. w₁ og w₂ er <em>ikke</em> selve holdningerne, men vægte, der bestemmer, hvor meget hver af de to input tæller med i scoren. Justér vægtene og bias, og se hvordan skillelinjen mellem rødt og blåt flytter sig. Datasættet er de samme elleve vælgere som i kapitel 3.
   </p>
 
   <div class="container">
@@ -117,13 +117,13 @@
       <div class="formula" id="formula"></div>
 
       <div class="control">
-        <label for="w1">w₁ (økonomi)</label>
+        <label for="w1">w₁ (vægt på x₁: økonomi)</label>
         <input id="w1" type="range" min="-1" max="1" step="0.05" value="0.1">
         <div class="value" id="w1Value"></div>
       </div>
 
       <div class="control">
-        <label for="w2">w₂ (værdipolitik)</label>
+        <label for="w2">w₂ (vægt på x₂: værdipolitik)</label>
         <input id="w2" type="range" min="-1" max="1" step="0.05" value="-0.1">
         <div class="value" id="w2Value"></div>
       </div>
