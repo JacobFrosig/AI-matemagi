@@ -161,7 +161,8 @@
   <p>Datasættet er det samme som i bogens kapitel 4: 13 vælgere, hvor de lilla er <strong>midterparti</strong>-vælgere (y=1) og de grå <strong>ikke</strong> er (y=0). Justér vægtene for de fire skjulte neuroner (h₁–h₄) og for outputneuronen, og se hvordan den skraverede beslutningsregion ændrer sig. Sluk evt. en neuron for output med afkrydsningsfeltet, hvis I vil prøve med færre end fire skjulte neuroner (se Opgave 4.10).</p>
 
   <div class="buttons">
-    <button id="loadExample" class="primary">Indlæs eksempel fra bogen (boks)</button>
+    <button id="loadExample" class="primary">Indlæs eksempel fra bogen (boks, 4 neuroner)</button>
+    <button id="loadTwoNeuron">Indlæs 2-neuron eksempel (afsnit 4.6)</button>
     <button id="resetDefault">Nulstil</button>
   </div>
 
@@ -214,7 +215,7 @@
         <span><span class="dot" style="background:#9CA3AF"></span>Faktisk: ikke midterparti</span>
         <span><span class="dot" style="background:#7C3AED"></span>Faktisk: midterparti</span>
       </div>
-      <p class="small">En sort ring om punktet betyder, at modellen klassificerer det <strong>forkert</strong> (tærskel y &gt; 0,5).</p>
+      <p class="small">Den <strong>tykke sorte linje</strong> er netværkets samlede beslutningsgrænse (der hvor y = 0,5) --- alt inden for linjen forudsiges midterparti, alt uden for forudsiges ikke. De tynde stiplede farvede linjer er hver enkelt skjult neurons egen grænse (hᵢ = 0,5). En sort ring om et punkt betyder, at modellen klassificerer det <strong>forkert</strong>.</p>
       <div class="summary" id="summary"></div>
     </div>
 
@@ -413,21 +414,75 @@
       }
     }
 
-    function drawHeatmap(p){
+    const GRID_STEP = 8;
+
+    function computeGrid(p){
+      const xs = [];
+      for(let px = margin.left; px <= width - margin.right; px += GRID_STEP) xs.push(px);
+      const ys = [];
+      for(let py = margin.top; py <= height - margin.bottom; py += GRID_STEP) ys.push(py);
+      const vals = [];
+      for(let j=0;j<ys.length;j++){
+        const row = [];
+        for(let i=0;i<xs.length;i++){
+          const x1 = xInv(xs[i]);
+          const x2 = yInv(ys[j]);
+          row.push(forward(p, x1, x2).y);
+        }
+        vals.push(row);
+      }
+      return {xs, ys, vals};
+    }
+
+    function drawHeatmap(grid){
       ctx.clearRect(0,0,width,height);
-      const step = 6;
-      for(let px = margin.left; px < width - margin.right; px += step){
-        for(let py = margin.top; py < height - margin.bottom; py += step){
-          const x1 = xInv(px + step/2);
-          const x2 = yInv(py + step/2);
-          const r = forward(p, x1, x2);
-          const [rr,gg,bb] = bgColor(r.y);
+      const {xs, ys, vals} = grid;
+      for(let j=0;j<ys.length;j++){
+        for(let i=0;i<xs.length;i++){
+          const [rr,gg,bb] = bgColor(vals[j][i]);
           ctx.fillStyle = `rgb(${rr},${gg},${bb})`;
-          ctx.fillRect(px, py, step+1, step+1);
+          ctx.fillRect(xs[i]-GRID_STEP/2, ys[j]-GRID_STEP/2, GRID_STEP+1, GRID_STEP+1);
         }
       }
       ctx.strokeStyle = "#999";
       ctx.strokeRect(margin.left, margin.top, plotW, plotH);
+    }
+
+    // Marching squares på y=0,5-niveaukurven: det er selve beslutnings-
+    // grænsen for HELE netværket (ikke bare én skjult neurons egen linje).
+    function traceDecisionBoundary(grid){
+      const {xs, ys, vals} = grid;
+      const segments = [];
+      function interp(pA,vA,pB,vB){
+        const t = (0.5-vA)/(vB-vA);
+        return [pA[0]+t*(pB[0]-pA[0]), pA[1]+t*(pB[1]-pA[1])];
+      }
+      for(let j=0;j<ys.length-1;j++){
+        for(let i=0;i<xs.length-1;i++){
+          const v00=vals[j][i], v10=vals[j][i+1], v01=vals[j+1][i], v11=vals[j+1][i+1];
+          const p00=[xs[i],ys[j]], p10=[xs[i+1],ys[j]], p01=[xs[i],ys[j+1]], p11=[xs[i+1],ys[j+1]];
+          const above = [v00>=0.5, v10>=0.5, v01>=0.5, v11>=0.5];
+          const edges = [];
+          if(above[0] !== above[1]) edges.push(interp(p00,v00,p10,v10));
+          if(above[2] !== above[3]) edges.push(interp(p01,v01,p11,v11));
+          if(above[0] !== above[2]) edges.push(interp(p00,v00,p01,v01));
+          if(above[1] !== above[3]) edges.push(interp(p10,v10,p11,v11));
+          if(edges.length === 2){
+            segments.push(edges);
+          } else if(edges.length === 4){
+            segments.push([edges[0],edges[2]]);
+            segments.push([edges[1],edges[3]]);
+          }
+        }
+      }
+      return segments;
+    }
+
+    function drawDecisionBoundary(grid){
+      const segments = traceDecisionBoundary(grid);
+      for(const [a,b] of segments){
+        line(a[0], a[1], b[0], b[1], {stroke:"#111111", strokeWidth: 3});
+      }
     }
 
     function drawPoints(p){
@@ -452,13 +507,15 @@
       for(const id of allIds){ valueBoxes[id].textContent = `${id} = ${p[id].toFixed(1)}`; }
       updateFormula(p);
       updateTableAndSummary(p);
-      drawHeatmap(p);
+      const grid = computeGrid(p);
+      drawHeatmap(grid);
       clearSVG();
       drawAxes();
-      if(p.a1) drawBoundary(p.w11, p.w12, p.b1, {stroke: neuronColors[0], strokeWidth: 2.5, dash: "8 6"});
-      if(p.a2) drawBoundary(p.w21, p.w22, p.b2, {stroke: neuronColors[1], strokeWidth: 2.5, dash: "8 6"});
-      if(p.a3) drawBoundary(p.w31, p.w32, p.b3, {stroke: neuronColors[2], strokeWidth: 2.5, dash: "8 6"});
-      if(p.a4) drawBoundary(p.w41, p.w42, p.b4, {stroke: neuronColors[3], strokeWidth: 2.5, dash: "8 6"});
+      if(p.a1) drawBoundary(p.w11, p.w12, p.b1, {stroke: neuronColors[0], strokeWidth: 1.5, dash: "6 5"});
+      if(p.a2) drawBoundary(p.w21, p.w22, p.b2, {stroke: neuronColors[1], strokeWidth: 1.5, dash: "6 5"});
+      if(p.a3) drawBoundary(p.w31, p.w32, p.b3, {stroke: neuronColors[2], strokeWidth: 1.5, dash: "6 5"});
+      if(p.a4) drawBoundary(p.w41, p.w42, p.b4, {stroke: neuronColors[3], strokeWidth: 1.5, dash: "6 5"});
+      drawDecisionBoundary(grid);
       drawPoints(p);
     }
 
@@ -483,6 +540,18 @@
       a1:true, a2:true, a3:true, a4:true
     };
 
+    // De bedst mulige vægte for kun to skjulte neuroner (afsnit 4.6 i bogen).
+    // Danner et "tag" uden gulv: klassificerer 12 af 13 vælgere korrekt
+    // (kun (0,-4) bliver forkert klassificeret som midterparti).
+    const toNeuronEksempel = {
+      w11:-6, w12:-3, b1:10,
+      w21:6, w22:-3, b2:10,
+      w31:0, w32:0.1, b3:0,
+      w41:0, w42:-0.1, b4:0,
+      v1:1, v2:1, v3:0.5, v4:0.5, bud:-1.5,
+      a1:true, a2:true, a3:false, a4:false
+    };
+
     function applyValues(vals){
       for(const id of allIds) sliders[id].value = vals[id];
       for(const id of checkboxIds) checkboxes[id].checked = vals[id];
@@ -490,6 +559,7 @@
     }
 
     document.getElementById("loadExample").addEventListener("click", () => applyValues(bogEksempel));
+    document.getElementById("loadTwoNeuron").addEventListener("click", () => applyValues(toNeuronEksempel));
     document.getElementById("resetDefault").addEventListener("click", () => applyValues(defaults));
 
     applyValues(defaults);
