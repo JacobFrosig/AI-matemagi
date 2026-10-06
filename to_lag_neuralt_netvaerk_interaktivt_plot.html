@@ -158,11 +158,11 @@
 </head>
 <body>
   <h1>Interaktivt værktøj: to lag og et skjult lag</h1>
-  <p>Datasættet er det samme som i bogens kapitel 4: 13 vælgere, hvor de lilla er <strong>midterparti</strong>-vælgere (y=1) og de grå <strong>ikke</strong> er (y=0). Justér vægtene for de fire skjulte neuroner (h₁–h₄) og for outputneuronen, og se hvordan den skraverede beslutningsregion ændrer sig. Sluk evt. en neuron for output med afkrydsningsfeltet, hvis I vil prøve med færre end fire skjulte neuroner (se Opgave 4.10).</p>
+  <p>Datasættet er det samme som i Matematikken bag AI's kapitel 5: 13 vælgere, hvor de lilla er <strong>midterparti</strong>-vælgere (y=1) og de grå <strong>ikke</strong> er (y=0). Justér vægtene for de fire skjulte neuroner (h₁–h₄) og for outputneuronen, og se hvordan den skraverede beslutningsregion ændrer sig. Sluk evt. en neuron for output med afkrydsningsfeltet, hvis I vil prøve med færre end fire skjulte neuroner (se Opgave 5.11).</p>
 
   <div class="buttons">
-    <button id="loadExample" class="primary">Indlæs eksempel fra bogen (boks, 4 neuroner)</button>
-    <button id="loadTwoNeuron">Indlæs 2-neuron eksempel (afsnit 4.6)</button>
+    <button id="loadExample" class="primary">Indlæs eksempel fra Matematikken bag AI (boks, 4 neuroner)</button>
+    <button id="loadTwoNeuron">Indlæs 2-neuron eksempel (afsnit 5.6)</button>
     <button id="resetDefault">Nulstil</button>
   </div>
 
@@ -540,7 +540,7 @@
       a1:true, a2:true, a3:true, a4:true
     };
 
-    // De bedst mulige vægte for kun to skjulte neuroner (afsnit 4.6 i bogen).
+    // De bedst mulige vægte for kun to skjulte neuroner (afsnit 5.6 i Matematikken bag AI).
     // Danner et "tag" uden gulv: klassificerer 12 af 13 vælgere korrekt
     // (kun (0,-4) bliver forkert klassificeret som midterparti).
     const toNeuronEksempel = {
